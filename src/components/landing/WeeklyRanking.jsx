@@ -1,5 +1,5 @@
 import React from "react";
 
 export default function WeeklyRanking() {
-  return <div>hello</div>;
+  return <div>제가 보이시나요?</div>;
 }
