@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import WeeklyRanking from "./components/landing/WeeklyRanking";
+import LandingIntro from "./components/landing/LandingIntro";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <WeeklyRanking />
+    <LandingIntro />
   </StrictMode>
 );
