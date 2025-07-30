@@ -71,7 +71,7 @@ const WebcamPage = () => {
         const face = results.detections[0];
         console.log("얼굴 감지됨:", face);
       } else {
-        console.log("얼굴 없음");
+        console.log("얼굴 없음!");
       }
     });
 
