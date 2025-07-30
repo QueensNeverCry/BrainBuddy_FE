@@ -589,6 +589,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mediapipe/camera_utils@npm:^0.3.1675466862":
+  version: 0.3.1675466862
+  resolution: "@mediapipe/camera_utils@npm:0.3.1675466862"
+  checksum: 77a63f450ffaa0914268c429c4dee76ec65d1161496bb5de97d6aa60e9ee1697abd1d46f80a9d641126adad1cf11a54061c7f3769e57beddf46168a299896c53
+  languageName: node
+  linkType: hard
+
+"@mediapipe/face_detection@npm:^0.4.1646425229":
+  version: 0.4.1646425229
+  resolution: "@mediapipe/face_detection@npm:0.4.1646425229"
+  checksum: 2312f9e7019542c895723c135c1005e9d445e51fba1759d57e2fa28e2541874e1b7298cbdc07a1dcdee79e93714d89935418ea22d092014bfc58166ff34bfd8d
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -1051,6 +1065,8 @@ __metadata:
   resolution: "brainbuddy@workspace:."
   dependencies:
     "@eslint/js": ^9.30.1
+    "@mediapipe/camera_utils": ^0.3.1675466862
+    "@mediapipe/face_detection": ^0.4.1646425229
     "@types/react": ^19.1.8
     "@types/react-dom": ^19.1.6
     "@vitejs/plugin-react": ^4.6.0
@@ -2264,8 +2280,8 @@ __metadata:
   linkType: hard
 
 "node-gyp@npm:latest":
-  version: 11.2.0
-  resolution: "node-gyp@npm:11.2.0"
+  version: 11.3.0
+  resolution: "node-gyp@npm:11.3.0"
   dependencies:
     env-paths: ^2.2.0
     exponential-backoff: ^3.1.1
@@ -2279,7 +2295,7 @@ __metadata:
     which: ^5.0.0
   bin:
     node-gyp: bin/node-gyp.js
-  checksum: 2536282ba81f8a94b29482d3622b6ab298611440619e46de4512a6f32396a68b5530357c474b859787069d84a4c537d99e0c71078cce5b9f808bf84eeb78e8fb
+  checksum: 64255952af18222e930a0bb8239e8fc86ec25eddfbf61523ab30b45f19670c1e66384ceda0472f5d59e63a7779b2134eab8ec5322b9f092f60202b0e312a66c8
   languageName: node
   linkType: hard
 

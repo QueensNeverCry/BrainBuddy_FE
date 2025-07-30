@@ -14,6 +14,8 @@ import TestModal from "../components/TestModal";
 import StartModal from "../components/StartModal";
 import EndModal from "../components/EndModal";
 import ResultModal from "../components/ResultModal";
+import { FaceDetection } from "@mediapipe/face_detection";
+import { Camera as MediaPipeCamera } from "@mediapipe/camera_utils";
 
 const WebcamPage = () => {
   const location = useLocation();
@@ -48,6 +50,75 @@ const WebcamPage = () => {
     }
     return () => clearInterval(interval);
   }, [isRecording]);
+
+  // 얼굴 인식 초기화
+  useEffect(() => {
+    if (!webcamRef.current) return;
+
+    const faceDetection = new FaceDetection({
+      locateFile: (file) => `/mediapipe/face_detection/${file}`,
+    });
+
+    faceDetection.setOptions({
+      model: "short",
+      modelSelection: 1,
+      minDetectionConfidence: 0.5,
+    });
+
+    faceDetection.onResults((results) => {
+      // 여기서 결과 처리: 얼굴 좌표 등을 가져올 수 있음
+      if (results.detections && results.detections.length > 0) {
+        const face = results.detections[0];
+        console.log("얼굴 감지됨:", face);
+      } else {
+        console.log("얼굴 없음");
+      }
+    });
+
+    let camera;
+
+    const startCamera = async () => {
+      if (
+        webcamRef.current &&
+        webcamRef.current.video &&
+        webcamRef.current.video.readyState >= 3
+      ) {
+        camera = new MediaPipeCamera(webcamRef.current.video, {
+          onFrame: async () => {
+            await faceDetection.send({ image: webcamRef.current.video });
+          },
+          width: 640,
+          height: 480,
+        });
+        camera.start();
+      } else {
+        // 비디오가 준비될 때까지 기다렸다가 시작
+        const checkInterval = setInterval(() => {
+          if (
+            webcamRef.current &&
+            webcamRef.current.video &&
+            webcamRef.current.video.readyState >= 3
+          ) {
+            clearInterval(checkInterval);
+            camera = new MediaPipeCamera(webcamRef.current.video, {
+              onFrame: async () => {
+                await faceDetection.send({ image: webcamRef.current.video });
+              },
+              width: 640,
+              height: 480,
+            });
+            camera.start();
+          }
+        }, 500);
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (camera) camera.stop();
+    };
+  }, []);
 
   const handleStartRecording = () => {
     setShowStartModal(true);
@@ -168,7 +239,7 @@ const WebcamPage = () => {
                 <Webcam
                   ref={webcamRef}
                   className="w-full h-full object-cover"
-                  mirrored={true}
+                  mirrored={false}
                 />
                 {isRecording && (
                   <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2">

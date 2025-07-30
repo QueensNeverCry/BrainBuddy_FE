@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 
 const AuthModal = ({ onClose, onSuccess }) => {
@@ -10,6 +10,16 @@ const AuthModal = ({ onClose, onSuccess }) => {
     nickname: "",
     confirmPassword: "",
   });
+  const [isPasswordMismatch, setIsPasswordMismatch] = useState(false);
+
+  // 실시간 비밀번호 불일치 체크
+  useEffect(() => {
+    if (!isLogin && formData.password && formData.confirmPassword) {
+      setIsPasswordMismatch(formData.password !== formData.confirmPassword);
+    } else {
+      setIsPasswordMismatch(false);
+    }
+  }, [formData.password, formData.confirmPassword, isLogin]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -20,9 +30,31 @@ const AuthModal = ({ onClose, onSuccess }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // 실제로는 여기서 API 호출
-    console.log("Auth attempt:", formData);
-    onSuccess();
+
+    if (!isLogin) {
+      // 로컬 회원가입 저장
+      const { email, password, nickname } = formData;
+      localStorage.setItem(
+        "brainbuddyUser",
+        JSON.stringify({ email, password, nickname })
+      );
+      localStorage.setItem("nickname", nickname); // 닉네임 따로 저장
+      alert("회원가입이 완료되었습니다.");
+      switchMode(); // 로그인 폼으로 전환
+    } else {
+      // 로그인 로직 (간단한 localStorage 매칭)
+      const storedUser = JSON.parse(localStorage.getItem("brainbuddyUser"));
+      if (
+        storedUser &&
+        storedUser.email === formData.email &&
+        storedUser.password === formData.password
+      ) {
+        localStorage.setItem("nickname", storedUser.nickname); // 닉네임 재저장 (메인 페이지용)
+        onSuccess(); // 로그인 성공
+      } else {
+        alert("이메일 또는 비밀번호가 일치하지 않습니다.");
+      }
+    }
   };
 
   const switchMode = () => {
@@ -33,6 +65,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
       nickname: "",
       confirmPassword: "",
     });
+    setIsPasswordMismatch(false);
   };
 
   return (
@@ -41,7 +74,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">
-            {isLogin ? "로그인" : "회원가입"}
+            {isLogin ? "Hello!👋🏻" : "Welcome to BrainBuddy.🧠"}
           </h2>
           <button
             onClick={onClose}
@@ -65,14 +98,15 @@ const AuthModal = ({ onClose, onSuccess }) => {
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#bccebe] focus:outline-none placeholder:text-[13px]"
                   placeholder="사용할 닉네임을 입력하세요"
-                  required={!isLogin}
+                  required
                 />
               </div>
             </div>
           )}
 
+          {/* 이메일 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               이메일
@@ -84,13 +118,14 @@ const AuthModal = ({ onClose, onSuccess }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#bccebe] focus:outline-none placeholder:text-[13px]"
                 placeholder="이메일을 입력하세요"
                 required
               />
             </div>
           </div>
 
+          {/* 비밀번호 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               비밀번호
@@ -102,7 +137,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#bccebe] focus:outline-none placeholder:text-[13px]"
                 placeholder="비밀번호를 입력하세요"
                 required
               />
@@ -120,6 +155,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
             </div>
           </div>
 
+          {/* 비밀번호 확인 */}
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -132,17 +168,28 @@ const AuthModal = ({ onClose, onSuccess }) => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#bccebe] focus:outline-none placeholder:text-[13px]"
                   placeholder="비밀번호를 다시 입력하세요"
-                  required={!isLogin}
+                  required
                 />
               </div>
             </div>
           )}
 
+          {/* 로그인/회원가입 버튼 */}
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold transition-colors duration-200"
+            disabled={!isLogin && isPasswordMismatch}
+            title={
+              !isLogin && isPasswordMismatch
+                ? "비밀번호가 일치하지 않습니다."
+                : ""
+            }
+            className={`w-full py-3 rounded-xl font-semibold transition-colors duration-200 ${
+              !isLogin && isPasswordMismatch
+                ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                : "bg-[#bccebe] hover:bg-[#a8b5aa] text-[#252525]"
+            }`}
           >
             {isLogin ? "로그인" : "회원가입"}
           </button>
@@ -154,7 +201,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
             {isLogin ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}
             <button
               onClick={switchMode}
-              className="ml-2 text-emerald-600 hover:text-emerald-700 font-medium transition-colors duration-200"
+              className="ml-2 text-[#2e3830] hover:text-[#798b7c] font-medium transition-colors duration-200"
             >
               {isLogin ? "회원가입" : "로그인"}
             </button>

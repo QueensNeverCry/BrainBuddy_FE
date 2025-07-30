@@ -12,8 +12,8 @@ import {
 
 const ReportModal = ({ report, onClose }) => {
   const getScoreColor = (score) => {
-    if (score >= 90) return "text-green-600";
-    if (score >= 80) return "text-green-500";
+    if (score >= 90) return "text-emerald-400";
+    if (score >= 80) return "text-emerald-400";
     if (score >= 70) return "text-yellow-500";
     if (score >= 60) return "text-orange-500";
     return "text-red-500";
@@ -48,28 +48,28 @@ const ReportModal = ({ report, onClose }) => {
           <div className="bg-gray-50 rounded-xl p-4 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
+                <Calendar className="w-4 h-4 text-emerald-300" />
                 <div>
                   <p className="text-gray-500">날짜</p>
                   <p className="font-medium">{report.date}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-500" />
+                <Clock className="w-4 h-4 text-emerald-300" />
                 <div>
                   <p className="text-gray-500">시간</p>
                   <p className="font-medium">{report.time}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4 text-gray-500" />
+                <MapPin className="w-4 h-4 text-emerald-300" />
                 <div>
                   <p className="text-gray-500">장소</p>
                   <p className="font-medium">{report.place}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <BookOpen className="w-4 h-4 text-gray-500" />
+                <BookOpen className="w-4 h-4 text-emerald-300" />
                 <div>
                   <p className="text-gray-500">주제</p>
                   <p className="font-medium">{report.subject}</p>
@@ -167,7 +167,7 @@ const ReportModal = ({ report, onClose }) => {
           {/* Recommendations */}
           <div className="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
             <div className="flex items-center space-x-2 mb-4">
-              <AlertTriangle className="w-5 h-5 text-emerald-600" />
+              <AlertTriangle className="w-5 h-5 text-emerald-400" />
               <h3 className="font-semibold text-emerald-800">개선 제안</h3>
             </div>
             <div className="space-y-3 text-sm text-emerald-700">

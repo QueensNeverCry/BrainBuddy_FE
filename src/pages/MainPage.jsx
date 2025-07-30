@@ -21,6 +21,7 @@ const MainPage = () => {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [nickname, setNickname] = useState("");
 
   useEffect(() => {
     // 튜토리얼을 보지 않겠다고 체크하지 않았다면 자동으로 표시
@@ -28,11 +29,16 @@ const MainPage = () => {
     if (!hideNextTime) {
       setShowTutorial(true);
     }
+
+    const storedNickname = localStorage.getItem("nickname");
+    if (storedNickname) {
+      setNickname(storedNickname);
+    }
   }, []);
 
   // 더미 데이터
   const userStats = {
-    nickname: "집중의달인",
+    nickname: nickname,
     totalSessions: 23,
     avgFocus: 87.5,
     currentRank: 12,
@@ -102,6 +108,7 @@ const MainPage = () => {
   ];
 
   const subjectOptions = [
+    "퀸기홍의 연애상담",
     "수학",
     "영어",
     "국어",
@@ -140,7 +147,7 @@ const MainPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <Brain className="w-8 h-8 text-emerald-600" />
+              <Brain className="w-8 h-8 text-emerald-400" />
               <span className="text-2xl font-bold text-gray-900">
                 BrainBuddy
               </span>
@@ -150,12 +157,12 @@ const MainPage = () => {
                 <p className="font-semibold text-gray-900">
                   {userStats.nickname}
                 </p>
-                <p className="text-sm text-emerald-600">
+                <p className="text-sm text-emerald-400">
                   #{userStats.currentRank} 순위
                 </p>
               </div>
               <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                <Award className="w-5 h-5 text-emerald-600" />
+                <Award className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
           </div>
@@ -167,8 +174,8 @@ const MainPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
             <div className="flex items-center justify-between mb-2">
-              <BarChart3 className="w-8 h-8 text-emerald-600" />
-              <span className="text-2xl font-bold text-emerald-600">
+              <BarChart3 className="w-8 h-8 text-emerald-400" />
+              <span className="text-2xl font-bold text-emerald-400">
                 {userStats.avgFocus}%
               </span>
             </div>
@@ -177,8 +184,8 @@ const MainPage = () => {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
             <div className="flex items-center justify-between mb-2">
-              <Calendar className="w-8 h-8 text-blue-500" />
-              <span className="text-2xl font-bold text-blue-500">
+              <Calendar className="w-8 h-8 text-[#46639d]" />
+              <span className="text-2xl font-bold text-[#46639d]">
                 {userStats.totalSessions}
               </span>
             </div>
@@ -187,8 +194,8 @@ const MainPage = () => {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
             <div className="flex items-center justify-between mb-2">
-              <Award className="w-8 h-8 text-yellow-500" />
-              <span className="text-2xl font-bold text-yellow-500">
+              <Award className="w-8 h-8 text-[#d9d248]" />
+              <span className="text-2xl font-bold text-[#d9d248]">
                 #{userStats.currentRank}
               </span>
             </div>
@@ -197,8 +204,8 @@ const MainPage = () => {
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
             <div className="flex items-center justify-between mb-2">
-              <Brain className="w-8 h-8 text-purple-500" />
-              <span className="text-2xl font-bold text-purple-500">
+              <Brain className="w-8 h-8 text-[#9737e6]" />
+              <span className="text-2xl font-bold text-[#9737e6]">
                 {userStats.totalUsers}
               </span>
             </div>
@@ -279,7 +286,7 @@ const MainPage = () => {
                 disabled={!canStartSession}
                 className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center space-x-2 ${
                   canStartSession
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 shadow-lg"
+                    ? "bg-emerald-100 hover:bg-emerald-400 text-black hover:text-white hover:scale-105 shadow-lg"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}
               >
@@ -312,7 +319,7 @@ const MainPage = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-emerald-600">
+                      <p className="font-bold text-emerald-400">
                         {report.score}점
                       </p>
                       <p className="text-xs text-gray-500">{report.duration}</p>
@@ -320,7 +327,7 @@ const MainPage = () => {
                   </div>
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
                     <span className="flex items-center space-x-1">
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-4 h-4 text-emerald-300" />
                       <span>{report.place}</span>
                     </span>
                   </div>
