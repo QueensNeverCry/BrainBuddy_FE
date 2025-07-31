@@ -21,7 +21,10 @@ const WebcamPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const webcamRef = useRef(null);
-
+  // 추적용 이미지 전송 타이머 Ref
+  const imageSendIntervalRef = useRef(null);
+  // 얼굴 영역 저장용 Ref
+  const faceDetection = useRef(null);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -35,6 +38,23 @@ const WebcamPage = () => {
     time: "오후 2:00",
     place: "집",
     subject: "학습",
+  };
+
+  // 매개변수 이름도 'file'로 수정
+  const sendCroppedFaceImage = (file) => {
+    const formData = new FormData();
+    formData.append("file", file, "face.jpg");
+
+    fetch("http://localhost:8000/upload", {
+      method: "POST",
+      body: formData,
+    })
+      .then((res) => {
+        console.log("이미지 전송 성공:", res.status);
+      })
+      .catch((err) => {
+        console.error("이미지 전송 실패:", err);
+      });
   };
 
   useEffect(() => {
@@ -66,15 +86,47 @@ const WebcamPage = () => {
     });
 
     faceDetection.onResults((results) => {
-      // 여기서 결과 처리: 얼굴 좌표 등을 가져올 수 있음
-      if (results.detections && results.detections.length > 0) {
-        const face = results.detections[0];
-        console.log("얼굴 감지됨:", face);
-      } else {
-        console.log("얼굴 없음!");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (
+        results.detections &&
+        results.detections.length > 0 &&
+        webcamRef.current &&
+        webcamRef.current.video
+      ) {
+        const detection = results.detections[0];
+        const { xCenter, yCenter, width, height } = detection.boundingBox;
+
+        const video = webcamRef.current.video;
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+
+        const x = (xCenter - width / 2) * videoWidth;
+        const y = (yCenter - height / 2) * videoHeight;
+        const w = width * videoWidth;
+        const h = height * videoHeight;
+
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const imageFile = new File([blob], `face_${Date.now()}.jpg`, {
+                type: "image/jpeg",
+              });
+
+              // 파일 전송 큐에 저장
+              if (isRecording) sendCroppedFaceImage(imageFile);
+            }
+          },
+          "image/jpeg",
+          0.95
+        );
       }
     });
-
     let camera;
 
     const startCamera = async () => {
@@ -118,7 +170,7 @@ const WebcamPage = () => {
     return () => {
       if (camera) camera.stop();
     };
-  }, []);
+  }, [isRecording]);
 
   const handleStartRecording = () => {
     setShowStartModal(true);
@@ -128,6 +180,12 @@ const WebcamPage = () => {
     setIsRecording(true);
     setFocusScore(75 + Math.random() * 20); // 초기 점수
     setShowStartModal(false);
+
+    imageSendIntervalRef.current = setInterval(() => {
+      if (webcamRef.current && webcamRef.current.video) {
+        faceDetection.send({ image: webcamRef.current.video });
+      }
+    }, 333); // 1000ms / 3
   };
 
   const handleEndRecording = () => {
@@ -136,6 +194,7 @@ const WebcamPage = () => {
 
   const confirmEnd = () => {
     setIsRecording(false);
+    clearInterval(imageSendIntervalRef.current);
     const finalScore = focusScore;
     const duration = sessionTime;
     const result = {
@@ -239,7 +298,7 @@ const WebcamPage = () => {
                 <Webcam
                   ref={webcamRef}
                   className="w-full h-full object-cover"
-                  mirrored={false}
+                  mirrored={true}
                 />
                 {isRecording && (
                   <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2">
