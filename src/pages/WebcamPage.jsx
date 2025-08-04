@@ -21,6 +21,9 @@ const WebcamPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const webcamRef = useRef(null);
+  // 마지막 전송 시간 저장용 Ref
+  const lastSentTimeRef = useRef(Date.now());
+
   // 추적용 이미지 전송 타이머 Ref
   const imageSendIntervalRef = useRef(null);
   // 얼굴 영역 저장용 Ref
@@ -95,6 +98,12 @@ const WebcamPage = () => {
         webcamRef.current &&
         webcamRef.current.video
       ) {
+        // (1) 시간 체크
+        const now = Date.now();
+        if (now - lastSentTimeRef.current < 333) return; // 1초에 최대 3회 전송
+        lastSentTimeRef.current = now;
+
+        // (2) 얼굴 바운딩 박스
         const detection = results.detections[0];
         const { xCenter, yCenter, width, height } = detection.boundingBox;
 
@@ -109,17 +118,18 @@ const WebcamPage = () => {
 
         canvas.width = w;
         canvas.height = h;
+
         ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
 
+        // (3) 이미지 생성 후 전송
         canvas.toBlob(
           (blob) => {
-            if (blob) {
+            if (blob && isRecording) {
               const imageFile = new File([blob], `face_${Date.now()}.jpg`, {
                 type: "image/jpeg",
               });
 
-              // 파일 전송 큐에 저장
-              if (isRecording) sendCroppedFaceImage(imageFile);
+              sendCroppedFaceImage(imageFile);
             }
           },
           "image/jpeg",
@@ -185,7 +195,7 @@ const WebcamPage = () => {
       if (webcamRef.current && webcamRef.current.video) {
         faceDetection.send({ image: webcamRef.current.video });
       }
-    }, 333); // 1000ms / 3
+    }, 111); // 1000ms / 3
   };
 
   const handleEndRecording = () => {
