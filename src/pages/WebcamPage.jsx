@@ -195,7 +195,7 @@ const WebcamPage = () => {
       if (webcamRef.current && webcamRef.current.video) {
         faceDetection.send({ image: webcamRef.current.video });
       }
-    }, 111); // 1000ms / 3
+    }, 333); // 1000ms / 3
   };
 
   const handleEndRecording = () => {

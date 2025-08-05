@@ -12,14 +12,14 @@ const TutorialModal = ({ onClose, onHideNextTime }) => {
       image: "🧠",
     },
     {
-      title: "3단계 학습 설정",
+      title: "사용자 맞춤 학습 설정",
       content: "언제, 어디서, 무엇을 학습할지 선택하여 맞춤형 분석을 받으세요.",
       image: "⚙️",
     },
     {
       title: "실시간 집중도 측정",
       content:
-        "웹캠을 통해 실시간으로 집중도를 분석하고 즉시 피드백을 받으세요.",
+        "웹캠을 통해 실시간으로 집중도를 분석하고, 즉시 피드백을 받으세요.",
       image: "📊",
     },
     {

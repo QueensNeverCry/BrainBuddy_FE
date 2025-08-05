@@ -158,7 +158,7 @@ const MainPage = () => {
                   {userStats.nickname}
                 </p>
                 <p className="text-sm text-emerald-400">
-                  #{userStats.currentRank} 순위
+                  현재 {userStats.currentRank}등이에요!🔥
                 </p>
               </div>
               <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
