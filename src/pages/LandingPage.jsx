@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Trophy, Users, Star, TrendingUp } from "lucide-react";
 import AuthModal from "../components/AuthModal";
@@ -6,6 +6,7 @@ import AuthModal from "../components/AuthModal";
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
+  // const [rankings, setRankings] = useState([]);
 
   // 더미 랭킹 데이터
   const rankings = [
@@ -39,6 +40,19 @@ const LandingPage = () => {
       trend: "same",
     },
   ];
+
+  // useEffect(() => {
+  //   const fetchRankings = async () => {
+  //     try {
+  //       const response = await fetch("http://localhost:8000/api/rankings");
+  //       const data = await response.json();
+  //       setRankings(data);
+  //     } catch (error) {
+  //       console.error("랭킹 데이터를 불러오는 데 실패했습니다:", error);
+  //     }
+  //   };
+  //   fetchRankings();
+  // }, []);
 
   const getRankColor = (rank) => {
     switch (rank) {

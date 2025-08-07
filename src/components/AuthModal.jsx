@@ -28,32 +28,54 @@ const AuthModal = ({ onClose, onSuccess }) => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!isLogin) {
-      // 로컬 회원가입 저장
-      const { email, password, nickname } = formData;
-      localStorage.setItem(
-        "brainbuddyUser",
-        JSON.stringify({ email, password, nickname })
-      );
-      localStorage.setItem("nickname", nickname); // 닉네임 따로 저장
-      alert("회원가입이 완료되었습니다.");
-      switchMode(); // 로그인 폼으로 전환
-    } else {
-      // 로그인 로직 (간단한 localStorage 매칭)
-      const storedUser = JSON.parse(localStorage.getItem("brainbuddyUser"));
-      if (
-        storedUser &&
-        storedUser.email === formData.email &&
-        storedUser.password === formData.password
-      ) {
-        localStorage.setItem("nickname", storedUser.nickname); // 닉네임 재저장 (메인 페이지용)
-        onSuccess(); // 로그인 성공
-      } else {
-        alert("이메일 또는 비밀번호가 일치하지 않습니다.");
+    const url = isLogin
+      ? "http://10.221.251.81:8000/api/auth/log-in"
+      : "http://10.221.251.81:8000/api/auth/sign-up";
+
+    const payload = isLogin
+      ? {
+          email: formData.email,
+          user_pw: formData.password,
+        }
+      : {
+          email: formData.email,
+          user_pw: formData.password,
+          user_name: formData.nickname,
+          user_pw_confirm: formData.confirmPassword,
+        };
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("서버 응답 에러:", errorData);
+        alert(errorData.detail || "오류가 발생했습니다.");
+        return;
       }
+
+      const data = await response.json();
+
+      if (isLogin) {
+        localStorage.setItem("nickname", data.user_name || ""); // 닉네임이 응답에 있는 경우
+        alert("로그인 성공!");
+        onSuccess(); // 부모 컴포넌트에서 처리
+      } else {
+        alert("회원가입이 완료되었습니다.");
+        switchMode(); // 로그인 모드로 전환
+      }
+    } catch (error) {
+      console.error("에러:", error);
+      alert("서버에 연결할 수 없습니다.");
     }
   };
 
@@ -61,9 +83,9 @@ const AuthModal = ({ onClose, onSuccess }) => {
     setIsLogin(!isLogin);
     setFormData({
       email: "",
-      password: "",
-      nickname: "",
-      confirmPassword: "",
+      user_name: "",
+      user_pw: "",
+      user_pw_confirm: "",
     });
     setIsPasswordMismatch(false);
   };

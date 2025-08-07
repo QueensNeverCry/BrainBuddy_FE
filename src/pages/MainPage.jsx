@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Brain,
@@ -12,13 +12,23 @@ import {
 } from "lucide-react";
 import TutorialModal from "../components/TutorialModal";
 import ReportModal from "../components/ReportModal";
+import { SessionContext } from "../contexts/SessionContext";
 
 const MainPage = () => {
   const navigate = useNavigate();
+  const {
+    selectedTime,
+    setSelectedTime,
+    selectedPlace,
+    setSelectedPlace,
+    selectedSubject,
+    setSelectedSubject,
+    recentReports,
+  } = useContext(SessionContext);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [selectedPlace, setSelectedPlace] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
+  // const [selectedTime, setSelectedTime] = useState("");
+  // const [selectedPlace, setSelectedPlace] = useState("");
+  // const [selectedSubject, setSelectedSubject] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [nickname, setNickname] = useState("");
@@ -46,7 +56,7 @@ const MainPage = () => {
     weeklyFocus: [78, 82, 85, 88, 90, 87, 89],
   };
 
-  const recentReports = [
+  const dummyReports = [
     {
       id: 1,
       date: "2025-01-08",
@@ -123,8 +133,17 @@ const MainPage = () => {
 
   const canStartSession = selectedTime && selectedPlace && selectedSubject;
 
+  // recentReports가 없으면 dummyReports 사용
+  const reportsToShow =
+    recentReports && recentReports.length > 0 ? recentReports : dummyReports;
+
   const handleStartSession = () => {
     if (canStartSession) {
+      // localStorage에 저장
+      localStorage.setItem("selectedTime", selectedTime);
+      localStorage.setItem("selectedPlace", selectedPlace);
+      localStorage.setItem("selectedSubject", selectedSubject);
+
       navigate("/webcam", {
         state: {
           time: selectedTime,
@@ -302,8 +321,8 @@ const MainPage = () => {
               최근 분석 리포트
             </h2>
 
-            <div className="space-y-4">
-              {recentReports.map((report) => (
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2 hide-scrollbar">
+              {reportsToShow.map((report) => (
                 <div
                   key={report.id}
                   onClick={() => handleReportClick(report)}

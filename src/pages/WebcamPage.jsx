@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import {
@@ -16,6 +16,7 @@ import EndModal from "../components/EndModal";
 import ResultModal from "../components/ResultModal";
 import { FaceDetection } from "@mediapipe/face_detection";
 import { Camera as MediaPipeCamera } from "@mediapipe/camera_utils";
+import { SessionContext } from "../contexts/SessionContext";
 
 const WebcamPage = () => {
   const location = useLocation();
@@ -25,6 +26,8 @@ const WebcamPage = () => {
   const imageSendIntervalRef = useRef(null);
   // 얼굴 영역 저장용 Ref
   const faceDetection = useRef(null);
+  const { selectedTime, selectedPlace, selectedSubject, addReport } =
+    useContext(SessionContext);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -34,11 +37,24 @@ const WebcamPage = () => {
   const [sessionTime, setSessionTime] = useState(0);
   const [sessionResult, setSessionResult] = useState(null);
 
-  const sessionData = location.state || {
-    time: "오후 2:00",
-    place: "집",
-    subject: "학습",
+  useEffect(() => {
+    if (location.state) {
+      localStorage.setItem("sessionData", JSON.stringify(location.state));
+    }
+  }, [location.state]);
+
+  const sessionData = {
+    time: selectedTime,
+    place: selectedPlace,
+    subject: selectedSubject,
   };
+
+  // const sessionData = location.state ||
+  //   JSON.parse(localStorage.getItem("sessionData")) || {
+  //     time: "오후 2:00",
+  //     place: "집",
+  //     subject: "학습",
+  //   };
 
   // 매개변수 이름도 'file'로 수정
   const sendCroppedFaceImage = (file) => {
@@ -211,6 +227,8 @@ const WebcamPage = () => {
         distractions: Math.floor(Math.random() * 5) + 1,
       },
     };
+
+    addReport(result);
     setSessionResult(result);
     setShowEndModal(false);
     setShowResultModal(true);
@@ -234,6 +252,37 @@ const WebcamPage = () => {
     if (score >= 70) return "보통";
     if (score >= 60) return "낮음";
     return "매우 낮음";
+  };
+
+  // 집중도
+  const renderFocusIndicator = () => {
+    const blockScore = Math.round(focusScore / 10);
+
+    return (
+      <div className="text-center">
+        <div className="flex justify-center gap-1 mb-2">
+          {Array.from({ length: 10 }, (_, i) => {
+            const level = i + 1;
+            let color = "bg-gray-200";
+            if (blockScore >= 8 && level <= blockScore) color = "bg-[#729076]";
+            else if (blockScore >= 5 && level <= blockScore)
+              color = "bg-[#ADCFA5]";
+            else if (blockScore > 0 && level <= blockScore)
+              color = "bg-[#D8E5D4]";
+            return (
+              <div key={level} className={`${color} w-5 h-5 rounded`}></div>
+            );
+          })}
+        </div>
+        <p className="text-sm font-medium text-gray-700">
+          {focusScore <= 40
+            ? "지금 집중이 흐트러졌어요 ⚠️"
+            : focusScore <= 70
+            ? "집중을 유지해보세요 💡"
+            : "아주 잘 집중하고 있어요! 🔥"}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -360,34 +409,7 @@ const WebcamPage = () => {
                 실시간 집중도
               </h3>
               {isRecording ? (
-                <div className="text-center">
-                  <div
-                    className={`text-4xl font-bold mb-2 ${getFocusColor(
-                      focusScore
-                    )}`}
-                  >
-                    {Math.round(focusScore)}%
-                  </div>
-                  <p
-                    className={`text-sm font-medium ${getFocusColor(
-                      focusScore
-                    )}`}
-                  >
-                    {getFocusLevel(focusScore)}
-                  </p>
-                  <div className="mt-4 bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        focusScore >= 80
-                          ? "bg-green-500"
-                          : focusScore >= 60
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
-                      style={{ width: `${focusScore}%` }}
-                    ></div>
-                  </div>
-                </div>
+                renderFocusIndicator()
               ) : (
                 <div className="text-center text-gray-500">
                   <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -411,14 +433,6 @@ const WebcamPage = () => {
                     <span className="text-gray-600">진행 시간</span>
                     <span className="font-medium">
                       {formatTime(sessionTime)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">현재 집중도</span>
-                    <span
-                      className={`font-medium ${getFocusColor(focusScore)}`}
-                    >
-                      {Math.round(focusScore)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
