@@ -74,6 +74,15 @@ const MainPage = () => {
       score: 85.2,
       duration: "30분",
     },
+    {
+      id: 4,
+      date: "2025-01-05",
+      time: "오후 3:00",
+      place: "스터디룸",
+      subject: "코딩",
+      score: 90.0,
+      duration: "120분",
+    },
   ];
 
   const timeOptions = [
@@ -302,7 +311,7 @@ const MainPage = () => {
               최근 분석 리포트
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-4 h-96 overflow-y-auto scrollbar-hide">
               {recentReports.map((report) => (
                 <div
                   key={report.id}

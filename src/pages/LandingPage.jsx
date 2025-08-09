@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Trophy, Users, Star, TrendingUp } from "lucide-react";
 import AuthModal from "../components/AuthModal";
@@ -6,39 +6,27 @@ import AuthModal from "../components/AuthModal";
 const LandingPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
+  const [ranking, setRankings] = useState([]);
 
-  // 더미 랭킹 데이터
-  const rankings = [
-    {
-      rank: 1,
-      nickname: "퀸기홍",
-      score: 98.5,
-      sessions: 47,
-      trend: "up",
-    },
-    {
-      rank: 2,
-      nickname: "판교 엘리자베스",
-      score: 96.2,
-      sessions: 52,
-      trend: "up",
-    },
-    {
-      rank: 3,
-      nickname: "판교 크리스틴",
-      score: 94.8,
-      sessions: 38,
-      trend: "down",
-    },
-    { rank: 4, nickname: "리나기홍", score: 93.1, sessions: 41, trend: "up" },
-    {
-      rank: 5,
-      nickname: "판교핑크",
-      score: 91.7,
-      sessions: 35,
-      trend: "same",
-    },
-  ];
+  useEffect(() => {
+    const fetchRankings = async () => {
+      try {
+        const response = await fetch(
+          "http://192.168.0.15:8000/api/dashboard/weekly-ranking"
+        );
+        const data = await response.json();
+        if (Array.isArray(data.ranking)) {
+          setRankings(data.ranking);
+          console.log("랭킹 데이터: ", data.ranking);
+        } else {
+          console.warn("랭킹 데이터 형식이 올바르지 않습니다:", data);
+        }
+      } catch (error) {
+        console.error("랭킹 데이터를 불러오는 데 실패했습니다:", error);
+      }
+    };
+    fetchRankings();
+  }, []);
 
   const getRankColor = (rank) => {
     switch (rank) {
@@ -55,9 +43,9 @@ const LandingPage = () => {
 
   const getTrendIcon = (trend) => {
     switch (trend) {
-      case "up":
+      case true:
         return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case "down":
+      case false:
         return <TrendingUp className="w-4 h-4 text-red-500 rotate-180" />;
       default:
         return <div className="w-4 h-4" />;
@@ -161,8 +149,8 @@ const LandingPage = () => {
                 TOP 5 집중력 마스터
               </h3>
             </div>
-            <div className="divide-y divide-gray-100">
-              {rankings.map((user) => (
+            <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto scrollbar-hide">
+              {ranking.map((user) => (
                 <div
                   key={user.rank}
                   className="px-6 py-4 hover:bg-gray-50 transition-colors duration-150"
@@ -181,17 +169,17 @@ const LandingPage = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">
-                          {user.nickname}
+                          {user.user_name}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {user.sessions}회 학습
+                          {user.total_cnt}회 학습
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="text-right">
                         <p className="font-bold text-emerald-400">
-                          {user.score}점
+                          {parseInt(user.score)}점
                         </p>
                         <p className="text-xs text-gray-500">평균 집중도</p>
                       </div>

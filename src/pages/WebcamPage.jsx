@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import {
@@ -21,13 +21,15 @@ const WebcamPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const webcamRef = useRef(null);
+  // websocket 연결을 위한 Ref
+  const socketRef = useRef(null); // 소켓 연결을 위한 Ref
   // 마지막 전송 시간 저장용 Ref
   const lastSentTimeRef = useRef(Date.now());
+  // const lastFaceRef = useRef(null);
 
   // 추적용 이미지 전송 타이머 Ref
   const imageSendIntervalRef = useRef(null);
   // 얼굴 영역 저장용 Ref
-  const faceDetection = useRef(null);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -36,28 +38,63 @@ const WebcamPage = () => {
   const [focusScore, setFocusScore] = useState(0);
   const [sessionTime, setSessionTime] = useState(0);
   const [sessionResult, setSessionResult] = useState(null);
+  const [nickname, setNickname] = useState("");
+  const [focusLevel, setFocusLevel] = useState(0);
 
-  const sessionData = location.state || {
-    time: "오후 2:00",
-    place: "집",
-    subject: "학습",
-  };
+  const sessionData = useMemo(() => {
+    return (
+      location.state || {
+        user_name: nickname,
+        time: "오후 2:00",
+        place: "집",
+        subject: "학습",
+      }
+    );
+  }, [location.state, nickname]);
 
-  // 매개변수 이름도 'file'로 수정
-  const sendCroppedFaceImage = (file) => {
-    const formData = new FormData();
-    formData.append("file", file, "face.jpg");
+  useEffect(() => {
+    const storedNickname = localStorage.getItem("nickname");
+    if (storedNickname) {
+      setNickname(storedNickname);
+    }
+  }, []);
 
-    fetch("http://localhost:8000/upload", {
-      method: "POST",
-      body: formData,
-    })
-      .then((res) => {
-        console.log("이미지 전송 성공:", res.status);
-      })
-      .catch((err) => {
-        console.error("이미지 전송 실패:", err);
-      });
+  // 웹소켓 연결 함수
+  // 서버에서 { "focus": 점수 } 형식으로 메시지를 보낸다고 가정
+  const connectWebSocket = () => {
+    // const user_name = localStorage.getItem("nickname");
+    socketRef.current = new WebSocket(`ws://localhost:8000/ws/focus`);
+    // socketRef.current = new WebSocket(
+    //   `wss://192.168.0.15:8443/ws/real-time?user_name=${encodeURIComponent(
+    //     user_name
+    //   )}&subject=${encodeURIComponent(
+    //     sessionData.subject
+    //   )}&location=${encodeURIComponent(sessionData.place)}`
+    // );
+
+    socketRef.current.onopen = () => {
+      console.log("✅ WebSocket 연결 성공");
+      console.log(sessionData);
+    };
+
+    socketRef.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data); // 서버에서 JSON 형식으로 보냈다고 가정
+        if (typeof data.focus === "number") {
+          setFocusLevel(data.focus); // 점수 상태 업데이트
+        }
+      } catch (error) {
+        console.error("WebSocket 메시지 파싱 실패:", error);
+      }
+    };
+
+    socketRef.current.onerror = (err) => {
+      console.error("WebSocket 에러:", err);
+    };
+
+    socketRef.current.onclose = () => {
+      console.log("❌ WebSocket 연결 종료");
+    };
   };
 
   useEffect(() => {
@@ -89,6 +126,7 @@ const WebcamPage = () => {
     });
 
     faceDetection.onResults((results) => {
+      // console.log("onResults 호출 시간:", Date.now());
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
@@ -121,15 +159,11 @@ const WebcamPage = () => {
 
         ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
 
-        // (3) 이미지 생성 후 전송
         canvas.toBlob(
           (blob) => {
-            if (blob && isRecording) {
-              const imageFile = new File([blob], `face_${Date.now()}.jpg`, {
-                type: "image/jpeg",
-              });
-
-              sendCroppedFaceImage(imageFile);
+            if (blob && isRecording && socketRef.current?.readyState === 1) {
+              socketRef.current.send(blob); // Blob을 직접 전달
+              console.log(`이미지 전송 : ${blob.size} bytes, ${blob.type}`);
             }
           },
           "image/jpeg",
@@ -188,14 +222,8 @@ const WebcamPage = () => {
 
   const confirmStart = () => {
     setIsRecording(true);
-    setFocusScore(75 + Math.random() * 20); // 초기 점수
+    connectWebSocket();
     setShowStartModal(false);
-
-    imageSendIntervalRef.current = setInterval(() => {
-      if (webcamRef.current && webcamRef.current.video) {
-        faceDetection.send({ image: webcamRef.current.video });
-      }
-    }, 333); // 1000ms / 3
   };
 
   const handleEndRecording = () => {
@@ -205,6 +233,10 @@ const WebcamPage = () => {
   const confirmEnd = () => {
     setIsRecording(false);
     clearInterval(imageSendIntervalRef.current);
+    // Websocket 연결 종료
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
     const finalScore = focusScore;
     const duration = sessionTime;
     const result = {
@@ -238,13 +270,13 @@ const WebcamPage = () => {
     return "text-red-500";
   };
 
-  const getFocusLevel = (score) => {
-    if (score >= 90) return "매우 높음";
-    if (score >= 80) return "높음";
-    if (score >= 70) return "보통";
-    if (score >= 60) return "낮음";
-    return "매우 낮음";
-  };
+  // const getFocusLevel = (score) => {
+  //   if (score >= 90) return "매우 높음";
+  //   if (score >= 80) return "높음";
+  //   if (score >= 70) return "보통";
+  //   if (score >= 60) return "낮음";
+  //   return "매우 낮음";
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
@@ -369,6 +401,46 @@ const WebcamPage = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 실시간 집중도
               </h3>
+
+              {isRecording ? (
+                <div className="flex items-end justify-center space-x-1 h-32">
+                  {Array.from({ length: 10 }).map((_, idx) => {
+                    const blockNumber = idx + 1; // 1~10
+                    let color = "bg-gray-200"; // 기본 연한 회색
+
+                    if (blockNumber <= focusLevel) {
+                      if (focusLevel <= 4) color = "bg-green-200";
+                      else if (focusLevel <= 7) color = "bg-green-400";
+                      else color = "bg-green-600";
+                    }
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`${color} w-4 rounded-t`}
+                        style={{
+                          height: `${(blockNumber / 10) * 100}%`,
+                          transition: "background-color 0.3s ease",
+                        }}
+                      ></div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>
+                    분석을 시작하려면
+                    <br />
+                    시작하기 버튼을 눌러주세요
+                  </p>
+                </div>
+              )}
+            </div>
+            {/* <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                실시간 집중도
+              </h3>
               {isRecording ? (
                 <div className="text-center">
                   <div
@@ -408,7 +480,7 @@ const WebcamPage = () => {
                   </p>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Session Stats */}
             {isRecording && (
