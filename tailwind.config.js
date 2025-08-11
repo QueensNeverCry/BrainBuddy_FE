@@ -7,6 +7,7 @@ export default {
         emerald: {
           400: "#49795aff",
           300: "#7ca884ff",
+          200: "#aac6a2ff",
           100: "#cfdccbff",
           50: "#edf4efff",
         },

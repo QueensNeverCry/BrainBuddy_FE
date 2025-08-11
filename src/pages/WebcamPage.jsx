@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 import {
@@ -21,15 +27,18 @@ const WebcamPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const webcamRef = useRef(null);
-  // websocket 연결을 위한 Ref
-  const socketRef = useRef(null); // 소켓 연결을 위한 Ref
-  // 마지막 전송 시간 저장용 Ref
-  const lastSentTimeRef = useRef(Date.now());
-  // const lastFaceRef = useRef(null);
 
-  // 추적용 이미지 전송 타이머 Ref
-  const imageSendIntervalRef = useRef(null);
-  // 얼굴 영역 저장용 Ref
+  // WebSocket
+  const socketRef = useRef(null);
+
+  // refs for detection / sending
+  const faceBoxRef = useRef(null); // latest boundingBox
+  const faceDetectionRef = useRef(null);
+  const mpCameraRef = useRef(null);
+  const sendIntervalRef = useRef(null);
+  const reuseCanvasRef = useRef(null);
+
+  // UI state
   const [showTestModal, setShowTestModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -59,18 +68,11 @@ const WebcamPage = () => {
     }
   }, []);
 
-  // 웹소켓 연결 함수
-  // 서버에서 { "focus": 점수 } 형식으로 메시지를 보낸다고 가정
-  const connectWebSocket = () => {
-    // const user_name = localStorage.getItem("nickname");
+  // websocket 연결 함수
+  const connectWebSocket = useCallback(() => {
+    if (socketRef.current && socketRef.current.readyState === 1) return;
+
     socketRef.current = new WebSocket(`ws://localhost:8000/ws/focus`);
-    // socketRef.current = new WebSocket(
-    //   `wss://192.168.0.15:8443/ws/real-time?user_name=${encodeURIComponent(
-    //     user_name
-    //   )}&subject=${encodeURIComponent(
-    //     sessionData.subject
-    //   )}&location=${encodeURIComponent(sessionData.place)}`
-    // );
 
     socketRef.current.onopen = () => {
       console.log("✅ WebSocket 연결 성공");
@@ -79,9 +81,9 @@ const WebcamPage = () => {
 
     socketRef.current.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data); // 서버에서 JSON 형식으로 보냈다고 가정
+        const data = JSON.parse(event.data);
         if (typeof data.focus === "number") {
-          setFocusLevel(data.focus); // 점수 상태 업데이트
+          setFocusLevel(data.focus);
         }
       } catch (error) {
         console.error("WebSocket 메시지 파싱 실패:", error);
@@ -95,134 +97,246 @@ const WebcamPage = () => {
     socketRef.current.onclose = () => {
       console.log("❌ WebSocket 연결 종료");
     };
-  };
+  }, [sessionData, setFocusLevel]);
 
+  // session timer + dummy focus generator (1초마다)
   useEffect(() => {
     let interval;
     if (isRecording) {
       interval = setInterval(() => {
         setSessionTime((prev) => prev + 1);
-        // 더미 집중도 점수 시뮬레이션 (실제로는 AI 분석 결과)
-        setFocusScore((prev) =>
-          Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 5))
-        );
+        const newFocusScore = Math.floor(Math.random() * 91) + 10; // 10~100
+        setFocusScore(newFocusScore);
+        setFocusLevel(Math.floor(newFocusScore / 10)); // 0~10
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  // 얼굴 인식 초기화
+  // initialize FaceDetection + MediaPipeCamera (single place)
   useEffect(() => {
+    // create reusable canvas
+    if (!reuseCanvasRef.current) {
+      reuseCanvasRef.current = document.createElement("canvas");
+    }
+
+    // guard: ensure webcam exists
     if (!webcamRef.current) return;
 
-    const faceDetection = new FaceDetection({
+    // prevent double init
+    if (faceDetectionRef.current) return;
+
+    const fd = new FaceDetection({
       locateFile: (file) => `/mediapipe/face_detection/${file}`,
     });
 
-    faceDetection.setOptions({
+    fd.setOptions({
       model: "short",
       modelSelection: 1,
       minDetectionConfidence: 0.5,
     });
 
-    faceDetection.onResults((results) => {
-      // console.log("onResults 호출 시간:", Date.now());
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      if (
-        results.detections &&
-        results.detections.length > 0 &&
-        webcamRef.current &&
-        webcamRef.current.video
-      ) {
-        // (1) 시간 체크
-        const now = Date.now();
-        if (now - lastSentTimeRef.current < 333) return; // 1초에 최대 3회 전송
-        lastSentTimeRef.current = now;
-
-        // (2) 얼굴 바운딩 박스
-        const detection = results.detections[0];
-        const { xCenter, yCenter, width, height } = detection.boundingBox;
-
-        const video = webcamRef.current.video;
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-
-        const x = (xCenter - width / 2) * videoWidth;
-        const y = (yCenter - height / 2) * videoHeight;
-        const w = width * videoWidth;
-        const h = height * videoHeight;
-
-        canvas.width = w;
-        canvas.height = h;
-
-        ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob && isRecording && socketRef.current?.readyState === 1) {
-              socketRef.current.send(blob); // Blob을 직접 전달
-              console.log(`이미지 전송 : ${blob.size} bytes, ${blob.type}`);
-            }
-          },
-          "image/jpeg",
-          0.95
-        );
+    fd.onResults((results) => {
+      try {
+        if (results.detections && results.detections.length > 0) {
+          const det = results.detections[0];
+          // store bounding box (xCenter, yCenter, width, height) normalized
+          faceBoxRef.current = det.boundingBox;
+        } else {
+          faceBoxRef.current = null;
+        }
+      } catch (e) {
+        console.error("onResults 처리 중 오류:", e);
       }
     });
-    let camera;
 
-    const startCamera = async () => {
-      if (
-        webcamRef.current &&
-        webcamRef.current.video &&
-        webcamRef.current.video.readyState >= 3
-      ) {
-        camera = new MediaPipeCamera(webcamRef.current.video, {
-          onFrame: async () => {
-            await faceDetection.send({ image: webcamRef.current.video });
-          },
-          width: 640,
-          height: 480,
-        });
-        camera.start();
-      } else {
-        // 비디오가 준비될 때까지 기다렸다가 시작
-        const checkInterval = setInterval(() => {
-          if (
-            webcamRef.current &&
-            webcamRef.current.video &&
-            webcamRef.current.video.readyState >= 3
-          ) {
-            clearInterval(checkInterval);
-            camera = new MediaPipeCamera(webcamRef.current.video, {
-              onFrame: async () => {
-                await faceDetection.send({ image: webcamRef.current.video });
-              },
-              width: 640,
-              height: 480,
-            });
-            camera.start();
+    faceDetectionRef.current = fd;
+
+    // start MediaPipeCamera when video is ready
+    const startMediaPipe = () => {
+      if (mpCameraRef.current) return;
+      if (!webcamRef.current || !webcamRef.current.video) return;
+
+      mpCameraRef.current = new MediaPipeCamera(webcamRef.current.video, {
+        onFrame: async () => {
+          try {
+            await fd.send({ image: webcamRef.current.video });
+          } catch (e) {
+            // ignore occasional send errors
+            console.warn("fd.send error:", e);
           }
-        }, 500);
+        },
+        width: 640,
+        height: 480,
+      });
+      try {
+        mpCameraRef.current.start();
+      } catch (e) {
+        console.warn("MediaPipeCamera start failed:", e);
       }
     };
 
-    startCamera();
+    const video = webcamRef.current.video;
+    if (video && video.readyState >= 3) {
+      startMediaPipe();
+    } else {
+      const checker = setInterval(() => {
+        if (webcamRef.current?.video?.readyState >= 3) {
+          clearInterval(checker);
+          startMediaPipe();
+        }
+      }, 200);
+    }
 
     return () => {
-      if (camera) camera.stop();
+      // cleanup on unmount
+      try {
+        if (mpCameraRef.current) {
+          mpCameraRef.current.stop();
+          mpCameraRef.current = null;
+        }
+      } catch (e) {
+        // ignore
+        console.warn(e);
+      }
+      faceDetectionRef.current = null;
+      faceBoxRef.current = null;
     };
-  }, [isRecording]);
+  }, []); // mount once
+
+  // send loop: independent 3fps sender using latest faceBoxRef
+  useEffect(() => {
+    // clear any previous interval if stopping
+    if (!isRecording) {
+      if (sendIntervalRef.current) {
+        clearInterval(sendIntervalRef.current);
+        sendIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // ensure websocket connection is ready (connect if not)
+    if (!socketRef.current || socketRef.current.readyState !== 1) {
+      connectWebSocket();
+    }
+
+    const canvas = reuseCanvasRef.current || document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    sendIntervalRef.current = setInterval(() => {
+      const video = webcamRef.current?.video;
+      const box = faceBoxRef.current;
+      const ws = socketRef.current;
+
+      if (!video || !box || !ws || ws.readyState !== 1) {
+        return;
+      }
+
+      // Convert normalized bbox to pixel coords and clamp
+      const videoWidth = video.videoWidth || video.width || 640;
+      const videoHeight = video.videoHeight || video.height || 480;
+
+      const x = Math.max(
+        0,
+        Math.floor((box.xCenter - box.width / 2) * videoWidth)
+      );
+      const y = Math.max(
+        0,
+        Math.floor((box.yCenter - box.height / 2) * videoHeight)
+      );
+      const w = Math.max(16, Math.floor(box.width * videoWidth));
+      const h = Math.max(16, Math.floor(box.height * videoHeight));
+
+      // defensive: ensure within bounds
+      const xClamped = Math.min(videoWidth - 1, x);
+      const yClamped = Math.min(videoHeight - 1, y);
+      const wClamped = Math.min(videoWidth - xClamped, w);
+      const hClamped = Math.min(videoHeight - yClamped, h);
+
+      canvas.width = wClamped;
+      canvas.height = hClamped;
+
+      try {
+        ctx.drawImage(
+          video,
+          xClamped,
+          yClamped,
+          wClamped,
+          hClamped,
+          0,
+          0,
+          wClamped,
+          hClamped
+        );
+      } catch (e) {
+        console.warn("drawImage 실패:", e);
+        return;
+      }
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob && ws.readyState === 1) {
+            try {
+              ws.send(blob);
+              console.log(
+                "이미지 전송:",
+                blob.size,
+                "bytes",
+                new Date().toISOString()
+              );
+            } catch (e) {
+              console.error("WebSocket send 실패:", e);
+            }
+          }
+        },
+        "image/jpeg",
+        0.7
+      );
+    }, 333); // ~3fps
+
+    return () => {
+      if (sendIntervalRef.current) {
+        clearInterval(sendIntervalRef.current);
+        sendIntervalRef.current = null;
+      }
+    };
+  }, [connectWebSocket, isRecording]);
+
+  // ensure websocket closed when unmount
+  useEffect(() => {
+    return () => {
+      if (sendIntervalRef.current) {
+        clearInterval(sendIntervalRef.current);
+        sendIntervalRef.current = null;
+      }
+      if (socketRef.current) {
+        try {
+          socketRef.current.close();
+        } catch (e) {
+          console.log(e);
+        }
+        socketRef.current = null;
+      }
+      // stop mediapipe if mounted
+      try {
+        if (mpCameraRef.current) {
+          mpCameraRef.current.stop();
+          mpCameraRef.current = null;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+  }, []);
 
   const handleStartRecording = () => {
     setShowStartModal(true);
   };
 
   const confirmStart = () => {
-    setIsRecording(true);
+    // ensure websocket connected then start
     connectWebSocket();
+    setIsRecording(true);
     setShowStartModal(false);
   };
 
@@ -232,11 +346,23 @@ const WebcamPage = () => {
 
   const confirmEnd = () => {
     setIsRecording(false);
-    clearInterval(imageSendIntervalRef.current);
-    // Websocket 연결 종료
-    if (socketRef.current) {
-      socketRef.current.close();
+
+    // clear the sender interval explicitly
+    if (sendIntervalRef.current) {
+      clearInterval(sendIntervalRef.current);
+      sendIntervalRef.current = null;
     }
+
+    // close socket
+    if (socketRef.current) {
+      try {
+        socketRef.current.close();
+      } catch (e) {
+        console.warn("socket close error", e);
+      }
+      socketRef.current = null;
+    }
+
     const finalScore = focusScore;
     const duration = sessionTime;
     const result = {
@@ -269,14 +395,6 @@ const WebcamPage = () => {
     if (score >= 60) return "text-yellow-500";
     return "text-red-500";
   };
-
-  // const getFocusLevel = (score) => {
-  //   if (score >= 90) return "매우 높음";
-  //   if (score >= 80) return "높음";
-  //   if (score >= 70) return "보통";
-  //   if (score >= 60) return "낮음";
-  //   return "매우 낮음";
-  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
@@ -409,9 +527,9 @@ const WebcamPage = () => {
                     let color = "bg-gray-200"; // 기본 연한 회색
 
                     if (blockNumber <= focusLevel) {
-                      if (focusLevel <= 4) color = "bg-green-200";
-                      else if (focusLevel <= 7) color = "bg-green-400";
-                      else color = "bg-green-600";
+                      if (focusLevel <= 4) color = "bg-emerald-200";
+                      else if (focusLevel <= 7) color = "bg-emerald-300";
+                      else color = "bg-emerald-400";
                     }
 
                     return (
@@ -422,7 +540,7 @@ const WebcamPage = () => {
                           height: `${(blockNumber / 10) * 100}%`,
                           transition: "background-color 0.3s ease",
                         }}
-                      ></div>
+                      />
                     );
                   })}
                 </div>
@@ -437,50 +555,6 @@ const WebcamPage = () => {
                 </div>
               )}
             </div>
-            {/* <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                실시간 집중도
-              </h3>
-              {isRecording ? (
-                <div className="text-center">
-                  <div
-                    className={`text-4xl font-bold mb-2 ${getFocusColor(
-                      focusScore
-                    )}`}
-                  >
-                    {Math.round(focusScore)}%
-                  </div>
-                  <p
-                    className={`text-sm font-medium ${getFocusColor(
-                      focusScore
-                    )}`}
-                  >
-                    {getFocusLevel(focusScore)}
-                  </p>
-                  <div className="mt-4 bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        focusScore >= 80
-                          ? "bg-green-500"
-                          : focusScore >= 60
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
-                      style={{ width: `${focusScore}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>
-                    분석을 시작하려면
-                    <br />
-                    시작하기 버튼을 눌러주세요
-                  </p>
-                </div>
-              )}
-            </div> */}
 
             {/* Session Stats */}
             {isRecording && (
