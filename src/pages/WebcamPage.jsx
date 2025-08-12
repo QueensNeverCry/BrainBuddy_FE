@@ -84,6 +84,7 @@ const WebcamPage = () => {
         const data = JSON.parse(event.data);
         if (typeof data.focus === "number") {
           setFocusLevel(data.focus);
+          console.log("📨 서버로부터 집중도 수신: ", data.focus);
         }
       } catch (error) {
         console.error("WebSocket 메시지 파싱 실패:", error);
@@ -105,13 +106,13 @@ const WebcamPage = () => {
     if (isRecording) {
       interval = setInterval(() => {
         setSessionTime((prev) => prev + 1);
-        const newFocusScore = Math.floor(Math.random() * 91) + 10; // 10~100
-        setFocusScore(newFocusScore);
-        setFocusLevel(Math.floor(newFocusScore / 10)); // 0~10
+        // const newFocusScore = Math.floor(Math.random() * 91) + 10; // 10~100
+        setFocusScore(focusLevel * 10);
+        // setFocusLevel(Math.floor(newFocusScore / 10)); // 0~10
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, focusLevel]);
 
   // initialize FaceDetection + MediaPipeCamera (single place)
   useEffect(() => {
