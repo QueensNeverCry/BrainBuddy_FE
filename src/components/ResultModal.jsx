@@ -10,25 +10,25 @@ const ResultModal = ({ result, onClose }) => {
     return "text-red-500";
   };
 
-  const getScoreGrade = (score) => {
-    if (score >= 90) return "A+";
-    if (score >= 80) return "A";
-    if (score >= 70) return "B";
-    if (score >= 60) return "C";
-    return "D";
-  };
+  // const getScoreGrade = (score) => {
+  //   if (score >= 90) return "A+";
+  //   if (score >= 80) return "A";
+  //   if (score >= 70) return "B";
+  //   if (score >= 60) return "C";
+  //   return "D";
+  // };
 
-  const getMotivationalMessage = (score) => {
-    if (score >= 90)
-      return "🎉 놀라운 집중력이에요! 계속 이 패턴을 유지하세요!";
-    if (score >= 80)
-      return "👏 훌륭한 집중력입니다! 조금만 더 노력하면 완벽해요!";
-    if (score >= 70)
-      return "👍 좋은 집중력이에요! 다음에는 더 좋은 결과를 기대해봐요!";
-    if (score >= 60)
-      return "📈 괜찮은 시작이에요! 환경을 개선하면 더 좋아질 거예요!";
-    return "💪 다음에는 더 잘할 수 있어요! 포기하지 마세요!";
-  };
+  // const getMotivationalMessage = (score) => {
+  //   if (score >= 90)
+  //     return "🎉 놀라운 집중력이에요! 계속 이 패턴을 유지하세요!";
+  //   if (score >= 80)
+  //     return "👏 훌륭한 집중력입니다! 조금만 더 노력하면 완벽해요!";
+  //   if (score >= 70)
+  //     return "👍 좋은 집중력이에요! 다음에는 더 좋은 결과를 기대해봐요!";
+  //   if (score >= 60)
+  //     return "📈 괜찮은 시작이에요! 환경을 개선하면 더 좋아질 거예요!";
+  //   return "💪 다음에는 더 잘할 수 있어요! 포기하지 마세요!";
+  // };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -62,10 +62,10 @@ const ResultModal = ({ result, onClose }) => {
                 result.score
               )}`}
             >
-              {getScoreGrade(result.score)} 등급
+              {result.score} 등급
             </div>
             <p className="text-gray-600 text-lg leading-relaxed mb-4">
-              {getMotivationalMessage(result.score)}
+              {result.ment}
             </p>
           </div>
 

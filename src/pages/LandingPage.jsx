@@ -12,7 +12,7 @@ const LandingPage = () => {
     const fetchRankings = async () => {
       try {
         const response = await fetch(
-          "http://192.168.0.15:8000/api/dashboard/weekly-ranking"
+          "http://10.221.251.50:9000/api/dashboard/weekly-ranking"
         );
         const data = await response.json();
         if (Array.isArray(data.ranking)) {

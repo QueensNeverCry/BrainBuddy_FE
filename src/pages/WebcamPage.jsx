@@ -345,7 +345,7 @@ const WebcamPage = () => {
     setShowEndModal(true);
   };
 
-  const confirmEnd = () => {
+  const confirmEnd = async () => {
     setIsRecording(false);
 
     // clear the sender interval explicitly
@@ -364,25 +364,45 @@ const WebcamPage = () => {
       socketRef.current = null;
     }
 
-    const finalScore = focusScore;
-    const duration = sessionTime;
-    const result = {
-      score: Math.round(finalScore * 10) / 10,
-      duration: formatTime(duration),
-      subject: sessionData.subject,
-      place: sessionData.place,
-      time: sessionData.time,
-      date: new Date().toLocaleDateString("ko-KR"),
-      details: {
-        avgFocus: Math.round(finalScore * 10) / 10,
-        maxFocus: Math.round((finalScore + 10) * 10) / 10,
-        minFocus: Math.round((finalScore - 10) * 10) / 10,
-        distractions: Math.floor(Math.random() * 5) + 1,
-      },
-    };
-    setSessionResult(result);
-    setShowEndModal(false);
-    setShowResultModal(true);
+    try {
+      const res = await fetch("http://localhost:8000/recent-report", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`API 요청 실패: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log("📨 백엔드 응답:", data);
+
+      const result = {
+        score: data.final_score,
+        duration: formatTime(sessionTime),
+        subject: sessionData.subject,
+        place: sessionData.place,
+        time: sessionData.time,
+        date: new Date().toLocaleDateString("ko-KR"),
+        details: {
+          avgFocus: data.avg_focus,
+          maxFocus: data.max_focus,
+          minFocus: data.min_focus,
+          distractions: Math.floor(Math.random() * 5) + 1,
+        },
+        grade: data.final_grade,
+        ment: data.final_ment,
+      };
+
+      setSessionResult(result);
+      setShowEndModal(false);
+      setShowResultModal(true);
+    } catch (error) {
+      console.log("종료 API 호출 중 오류:", error);
+      alert("결과를 불러오는데 실패했습니다.");
+    }
   };
 
   const formatTime = (seconds) => {
