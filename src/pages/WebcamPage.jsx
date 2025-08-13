@@ -72,7 +72,16 @@ const WebcamPage = () => {
   const connectWebSocket = useCallback(() => {
     if (socketRef.current && socketRef.current.readyState === 1) return;
 
-    socketRef.current = new WebSocket(`ws://localhost:8000/ws/focus`);
+    socketRef.current = new WebSocket(
+      // `ws://localhost:8000/ws/focus?user_name=${encodeURIComponent(
+      //   localStorage.getItem("nickname")
+      // )}`
+      `wss://localhost:8443/ws/real-time?user_name=${encodeURIComponent(
+        localStorage.getItem("nickname")
+      )}&location=${encodeURIComponent(
+        sessionData.place
+      )}&subject=${encodeURIComponent(sessionData.subject)}`
+    );
 
     socketRef.current.onopen = () => {
       console.log("✅ WebSocket 연결 성공");

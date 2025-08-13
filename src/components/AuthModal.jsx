@@ -32,8 +32,8 @@ const AuthModal = ({ onClose, onSuccess }) => {
     e.preventDefault();
 
     const url = isLogin
-      ? "https://10.221.251.50:8443/api/auth/log-in"
-      : "https://10.221.251.50:8443/api/auth/sign-up";
+      ? "https://localhost:8443/api/auth/log-in"
+      : "https://localhost:8443/api/auth/sign-up";
 
     const payload = isLogin
       ? {
