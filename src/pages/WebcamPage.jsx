@@ -30,6 +30,7 @@ const WebcamPage = () => {
 
   // WebSocket
   const socketRef = useRef(null);
+  const isConnectedRef = useRef(false);
 
   // refs for detection / sending
   const faceBoxRef = useRef(null); // latest boundingBox
@@ -69,26 +70,31 @@ const WebcamPage = () => {
   }, []);
 
   // websocket 연결 함수
-  const connectWebSocket = useCallback(() => {
-    if (socketRef.current && socketRef.current.readyState === 1) return;
+  const connectWebSocket = useCallback((data) => {
+    if (
+      isConnectedRef.current ||
+      (socketRef.current && socketRef.current.readyState === 1)
+    )
+      return;
 
-    socketRef.current = new WebSocket(
+    const ws = new WebSocket(
       // `ws://localhost:8000/ws/focus?user_name=${encodeURIComponent(
       //   localStorage.getItem("nickname")
       // )}`
       `wss://localhost:8443/ws/real-time?user_name=${encodeURIComponent(
         localStorage.getItem("nickname")
       )}&location=${encodeURIComponent(
-        sessionData.place
-      )}&subject=${encodeURIComponent(sessionData.subject)}`
+        data.place
+      )}&subject=${encodeURIComponent(data.subject)}`
     );
 
-    socketRef.current.onopen = () => {
+    ws.onopen = () => {
       console.log("✅ WebSocket 연결 성공");
-      console.log(sessionData);
+      console.log(data);
+      isConnectedRef.current = true;
     };
 
-    socketRef.current.onmessage = (event) => {
+    ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (typeof data.focus === "number") {
@@ -100,14 +106,17 @@ const WebcamPage = () => {
       }
     };
 
-    socketRef.current.onerror = (err) => {
+    ws.onerror = (err) => {
       console.error("WebSocket 에러:", err);
     };
 
-    socketRef.current.onclose = () => {
+    ws.onclose = () => {
       console.log("❌ WebSocket 연결 종료");
+      isConnectedRef.current = false;
     };
-  }, [sessionData, setFocusLevel]);
+
+    socketRef.current = ws;
+  }, []);
 
   // session timer + dummy focus generator (1초마다)
   useEffect(() => {
@@ -226,9 +235,9 @@ const WebcamPage = () => {
     }
 
     // ensure websocket connection is ready (connect if not)
-    if (!socketRef.current || socketRef.current.readyState !== 1) {
-      connectWebSocket();
-    }
+    // if (!socketRef.current || socketRef.current.readyState !== 1) {
+    //   connectWebSocket();
+    // }
 
     const canvas = reuseCanvasRef.current || document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -345,7 +354,7 @@ const WebcamPage = () => {
 
   const confirmStart = () => {
     // ensure websocket connected then start
-    connectWebSocket();
+    connectWebSocket(sessionData);
     setIsRecording(true);
     setShowStartModal(false);
   };
@@ -367,6 +376,7 @@ const WebcamPage = () => {
     if (socketRef.current) {
       try {
         socketRef.current.close();
+        isConnectedRef.current = false;
       } catch (e) {
         console.warn("socket close error", e);
       }
@@ -374,12 +384,15 @@ const WebcamPage = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/recent-report", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        "https://localhost:8443//api/dashboard/recent-report/me",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!res.ok) {
         throw new Error(`API 요청 실패: ${res.status}`);
