@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import MainPage from "./pages/MainPage";
 import WebcamPage from "./pages/WebcamPage";
+import AccountDeletion from "./pages/AccountDeletion";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/main" element={<MainPage />} />
           <Route path="/webcam" element={<WebcamPage />} />
+          <Route path="/account-deletion" element={<AccountDeletion />} />
         </Routes>
       </div>
     </Router>

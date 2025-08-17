@@ -51,6 +51,13 @@ const WebcamPage = () => {
   const [nickname, setNickname] = useState("");
   const [focusLevel, setFocusLevel] = useState(0);
 
+  useEffect(() => {
+    if (!location.state) {
+      alert("올바르지 않은 접근입니다. 메인 화면으로 이동합니다.");
+      navigate("/main");
+    }
+  }, [location.state, navigate]);
+
   const sessionData = useMemo(() => {
     return (
       location.state || {
@@ -78,14 +85,17 @@ const WebcamPage = () => {
       return;
 
     const ws = new WebSocket(
-      // `ws://localhost:8000/ws/focus?user_name=${encodeURIComponent(
-      //   localStorage.getItem("nickname")
-      // )}`
-      `wss://localhost:8443/ws/real-time?user_name=${encodeURIComponent(
-        localStorage.getItem("nickname")
+      `ws://localhost:8500/ws/focus?user_name=${encodeURIComponent(
+        localStorage.getItem("nickname") || ""
+
+        // `wss://localhost:8443/ws/real-time?user_name=${encodeURIComponent(
+        //   localStorage.getItem("nickname") || ""
       )}&location=${encodeURIComponent(
         data.place
-      )}&subject=${encodeURIComponent(data.subject)}`
+      )}&subject=${encodeURIComponent(data.subject)}&time=${encodeURIComponent(
+        data.time
+      )}`
+      // )}&subject=${encodeURIComponent(data.subject)}`
     );
 
     ws.onopen = () => {
@@ -385,7 +395,8 @@ const WebcamPage = () => {
 
     try {
       const res = await fetch(
-        "https://localhost:8443//api/dashboard/recent-report/me",
+        // "https://localhost:8443/api/dashboard/recent-report/me",
+        "http://localhost:8500/api/dashboard/recent-report/me",
         {
           method: "GET",
           headers: {

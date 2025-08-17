@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { fetchWithAutoRefresh } from "../api/AuthApi";
+import { useNavigate } from "react-router-dom";
 
 const AuthModal = ({ onClose, onSuccess }) => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -11,6 +14,11 @@ const AuthModal = ({ onClose, onSuccess }) => {
     confirmPassword: "",
   });
   const [isPasswordMismatch, setIsPasswordMismatch] = useState(false);
+  // 닉네임 에러 메시지 상태
+  const [nicknameError, setNicknameError] = useState("");
+
+  // 언더바/하이픈, 2~16자)
+  const NAME_PATTERN = /^[A-Za-z0-9가-힣_-]{2,16}$/;
 
   // 비밀번호 확인 체크
   useEffect(() => {
@@ -28,12 +36,59 @@ const AuthModal = ({ onClose, onSuccess }) => {
     });
   };
 
+  // 닉네임 입력 시 서버에서 중복 체크
+  const handleNicknameChange = async (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, nickname: value });
+
+    if (value.trim() === "") setNicknameError("");
+  };
+
+  // ✅ 프론트 유효성 검사
+  const validateForm = () => {
+    // 모든 필드 입력 여부
+    if (
+      !formData.email ||
+      !formData.password ||
+      (!isLogin && (!formData.nickname || !formData.confirmPassword))
+    ) {
+      alert("모든 필드를 입력해주세요.");
+      return false; // INVALID_FORMAT
+    }
+
+    if (!isLogin) {
+      // 닉네임 형식 검사
+      if (!NAME_PATTERN.test(formData.nickname)) {
+        alert("닉네임은 2~16자의 한글, 영문, 숫자, _, -만 가능합니다.");
+        return false; // INVALID_FORMAT
+      }
+
+      // 비밀번호 길이 검사
+      if (formData.password.length < 8 || formData.password.length > 24) {
+        alert("비밀번호는 8~24자여야 합니다.");
+        return false; // INVALID_PW
+      }
+
+      // 비밀번호 일치 여부
+      if (formData.password !== formData.confirmPassword) {
+        alert("비밀번호가 일치하지 않습니다.");
+        return false; // INVALID_PW
+      }
+    }
+
+    return true; // 통과
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!validateForm()) return;
+
     const url = isLogin
-      ? "https://localhost:8443/api/auth/log-in"
-      : "https://localhost:8443/api/auth/sign-up";
+      ? // ? "https://localhost:8443/api/auth/log-in"
+        // : "https://localhost:8443/api/auth/sign-up";
+        "http://localhost:8500/api/auth/log-in"
+      : "http://localhost:8500/api/auth/sign-up";
 
     const payload = isLogin
       ? {
@@ -41,40 +96,68 @@ const AuthModal = ({ onClose, onSuccess }) => {
           user_pw: formData.password,
         }
       : {
+          user_name: formData.nickname,
           email: formData.email,
           user_pw: formData.password,
-          user_name: formData.nickname,
           user_pw_confirm: formData.confirmPassword,
         };
 
     try {
-      const response = await fetch(url, {
+      const data = await fetchWithAutoRefresh(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        credentials: "include", // 쿠키 포함
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        alert(errorData.detail || "오류가 발생했습니다.");
+      console.log("서버 응답🔥🔥🔥🔥:", data);
+
+      if (data.body?.code !== "success") {
+        // 로그인 전용 오류 코드 처리
+        if (isLogin) {
+          if (data.body?.code === "USER_NOT_EMAIL") {
+            alert("올바르지 않은 이메일입니다.");
+          } else if (data.body?.code === "USER_NOT_PW") {
+            alert("올바르지 않은 비밀번호입니다.");
+          } else if (data.body?.code === "USER_NOT_FOUND") {
+            alert("존재하지 않는 계정입니다.");
+          } else if (data.body?.code === "WRONG_FORMAT") {
+            alert("입력 형식이 올바르지 않습니다.");
+          } else {
+            alert(data.message || "로그인 중 오류가 발생했습니다.");
+          }
+        } else {
+          // 회원가입 관련 오류 코드
+          if (data.body?.code === "USER_EXISTS_NAME") {
+            alert("이미 존재하는 닉네임입니다.");
+          } else if (data.body?.code === "USER_EXISTS_EMAIL") {
+            alert("이미 존재하는 이메일입니다.");
+          } else if (data.body?.code === "INVALID_FORMAT") {
+            alert("올바른 형식으로 입력해주세요.");
+          } else if (data.body?.code === "INVALID_PW") {
+            alert("비밀번호가 일치하지 않습니다.");
+          } else {
+            alert(data.message || "회원가입 중 오류가 발생했습니다.");
+          }
+        }
+
         return;
       }
 
-      const data = await response.json();
+      // 로그인 or 회원가입 성공 시 토큰과 닉네임 저장
+      const { accessToken, refreshToken, user_name } = data.body;
+      // localStorage.setItem("access", accessToken);
+      // localStorage.setItem("refresh", refreshToken);
+      localStorage.setItem("nickname", data.body.user_name || ""); // 닉네임 저장
 
-      if (isLogin) {
-        localStorage.setItem("nickname", data.user_name || ""); // 닉네임이 응답에 있는 경우
-        alert("로그인 성공!");
-        onSuccess(); // 부모 컴포넌트에서 처리
-      } else {
-        alert("회원가입이 완료되었습니다.");
-        switchMode(); // 로그인 모드로 전환
-      }
+      // 로그인 또는 회원가입이 "성공"했을 때 실행되는 블록
+      alert(isLogin ? "로그인 성공!" : "회원가입이 완료되었습니다!");
+      onSuccess(); // 모달 닫기, 페이지 이도 등의 후속 처리
+      navigate("/main");
     } catch (error) {
-      console.error("에러:", error);
-      alert("서버에 연결할 수 없습니다.");
+      console.error("⚠️⚠️로그인 중 에러 발생:", error);
+      // alert("세션이 만료되어 다시 로그인 해주세요.");
+      alert(`로그인 실패: ${error.message}`);
     }
   };
 
@@ -118,12 +201,17 @@ const AuthModal = ({ onClose, onSuccess }) => {
                   type="text"
                   name="nickname"
                   value={formData.nickname}
-                  onChange={handleInputChange}
+                  onChange={handleNicknameChange}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#bccebe] focus:outline-none placeholder:text-[13px]"
                   placeholder="사용할 닉네임을 입력하세요"
                   required
                 />
               </div>
+
+              {/* 닉네임 에러 메시지 */}
+              {nicknameError && (
+                <p className="text-red-500 text-sm mt-1">{nicknameError}</p>
+              )}
             </div>
           )}
 

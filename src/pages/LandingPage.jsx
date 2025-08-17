@@ -12,7 +12,8 @@ const LandingPage = () => {
     const fetchRankings = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8000/api/dashboard/weekly-ranking"
+          // "https://localhost:8443/api/dashboard/weekly-ranking"
+          "http://localhost:8500/api/dashboard/weekly-ranking"
         );
         const data = await response.json();
         if (Array.isArray(data.ranking)) {
@@ -209,6 +210,7 @@ const LandingPage = () => {
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => {
+            console.log("로그인/회원가입 성공! 페이지 이동 시도🤩🤩🤩");
             setShowAuthModal(false);
             navigate("/main");
           }}
