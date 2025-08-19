@@ -149,10 +149,10 @@ const ReportModal = ({ report, onClose }) => {
                   <span className="font-medium">{report.duration}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">집중 방해 횟수</span>
+                  {/* <span className="text-gray-600">집중 방해 횟수</span>
                   <span className="font-medium text-orange-600">
                     {report.details?.distractions || 2}회
-                  </span>
+                  </span> */}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">효율성 지수</span>

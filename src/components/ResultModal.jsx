@@ -107,10 +107,10 @@ const ResultModal = ({ result, onClose }) => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">집중 방해 횟수</span>
+                {/* <span className="text-gray-600">집중 방해 횟수</span>
                 <span className="font-medium text-orange-600">
                   {result.details.distractions}회
-                </span>
+                </span> */}
               </div>
             </div>
           </div>
