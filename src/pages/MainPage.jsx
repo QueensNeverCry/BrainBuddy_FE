@@ -48,7 +48,7 @@ const MainPage = () => {
     const fetchMainInfo = async () => {
       try {
         const res = await fetch(
-          "https://localhost:8443/api/dashboard/main-info",
+          "https://www.brainbuddy.co.kr/api/dashboard/main-info",
           {
             method: "GET",
             credentials: "include", // 쿠키 전송
@@ -60,7 +60,7 @@ const MainPage = () => {
         if (data.status === "TOKEN_EXPIRED") {
           // refresh 요청
           const refreshRes = await fetch(
-            "https://localhost:8443/api/auth/refresh",
+            "https://www.brainbuddy.co.kr/api/auth/refresh",
             {
               method: "GET",
               credentials: "include",

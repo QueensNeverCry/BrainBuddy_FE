@@ -12,7 +12,7 @@ const LandingPage = () => {
     const fetchRankings = async () => {
       try {
         const response = await fetch(
-          "http://localhost:9000/api/dashboard/weekly-ranking"
+          "http://www.brainbuddy.co.kr/api/dashboard/weekly-ranking"
         );
         const data = await response.json();
         if (Array.isArray(data.ranking)) {

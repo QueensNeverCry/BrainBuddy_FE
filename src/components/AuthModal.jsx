@@ -34,8 +34,8 @@ const AuthModal = ({ onClose }) => {
     e.preventDefault();
 
     const url = isLogin
-      ? "https://localhost:8443/api/auth/log-in"
-      : "https://localhost:8443/api/auth/sign-up";
+      ? "https://www.brainbuddy.co.kr/api/auth/log-in"
+      : "https://www.branibuddy.co.kr/api/auth/sign-up";
 
     const payload = isLogin
       ? {
@@ -101,10 +101,13 @@ const AuthModal = ({ onClose }) => {
 
   const handleLoginSuccess = async () => {
     try {
-      let res = await fetch("https://localhost:8443/api/dashboard/main-info", {
-        method: "GET",
-        credentials: "include", // 쿠키 전송
-      });
+      let res = await fetch(
+        "https://www.brainbuddy.co.kr/api/dashboard/main-info",
+        {
+          method: "GET",
+          credentials: "include", // 쿠키 전송
+        }
+      );
       let data = await res.json();
 
       if (data.status === "success") {
@@ -114,7 +117,7 @@ const AuthModal = ({ onClose }) => {
       } else if (data.code === "TOKEN_EXPIRED") {
         // refresh token 요청
         const refreshRes = await fetch(
-          "https://localhost:8443/api/auth/refresh",
+          "https://www.brainbuddy.co.kr/api/auth/refresh",
           { method: "POST", credentials: "include" }
         );
         const refreshData = await refreshRes.json();

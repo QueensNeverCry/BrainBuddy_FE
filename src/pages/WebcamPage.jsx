@@ -81,7 +81,7 @@ const WebcamPage = () => {
       // `ws://localhost:8000/ws/focus?user_name=${encodeURIComponent(
       //   localStorage.getItem("nickname")
       // )}`
-      `wss://localhost:8443/ws/real-time?user_name=${encodeURIComponent(
+      `wss://www.brainbuddy.co.kr/ws/real-time?user_name=${encodeURIComponent(
         localStorage.getItem("nickname")
       )}&location=${encodeURIComponent(
         data.place
@@ -385,7 +385,7 @@ const WebcamPage = () => {
 
     try {
       const res = await fetch(
-        "https://localhost:8443/api/dashboard/recent-report/me",
+        "https://www.brainbuddy.co.kr/api/dashboard/recent-report/me",
         {
           method: "GET",
           headers: {
