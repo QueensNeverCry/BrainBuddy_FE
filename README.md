@@ -89,19 +89,26 @@ BrainBuddy_FE/
 ├── index.html          # SPA 진입점
 └── 기타 설정 파일       # eslint, postcss, gitignore 등
 
+```
 
 ## 🖥 주요 기능
 
 ### 🔑 회원 인증
+
 - 회원가입 / 로그인 API 연동
 - JWT Access & Refresh Token 발급 및 브라우저 쿠키 저장
 
 ### 🏠 메인 페이지
+
 - 학습 계획 설정 (언제 / 어디서 / 무엇을)
 - 학습 시작 버튼 클릭 시 **웹캠 페이지 이동**
 
 ### 📷 웹캠 페이지
+
 - Mediapipe Face Detection 기반 얼굴 인식
 - Crop된 얼굴 데이터를 **WebSocket**을 통해 초저지연 전송
 - 실시간 집중도 게이지 및 트렌드 그래프 제공
+
+```
+
 ```
