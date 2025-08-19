@@ -22,6 +22,16 @@ const MainPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [nickname, setNickname] = useState("");
+  // const location = useLocation();
+  // const userData = location.state?.userData;
+  const [userStats, setUserStats] = useState({
+    nickname: "",
+    totalSessions: 0,
+    avgFocus: 0,
+    currentRank: 0,
+    totalUsers: 0,
+  });
+  const [recentReports, setRecentReports] = useState([]);
 
   useEffect(() => {
     // 튜토리얼을 보지 않겠다고 체크하지 않았다면 자동으로 표시
@@ -34,56 +44,132 @@ const MainPage = () => {
     if (storedNickname) {
       setNickname(storedNickname);
     }
-  }, []);
+
+    const fetchMainInfo = async () => {
+      try {
+        const res = await fetch(
+          "https://localhost:8443/api/dashboard/main-info",
+          {
+            method: "GET",
+            credentials: "include", // 쿠키 전송
+          }
+        );
+        const data = await res.json();
+
+        // 토큰 만료 처리
+        if (data.status === "TOKEN_EXPIRED") {
+          // refresh 요청
+          const refreshRes = await fetch(
+            "https://localhost:8443/api/auth/refresh",
+            {
+              method: "GET",
+              credentials: "include",
+            }
+          );
+          const refreshData = await refreshRes.json();
+
+          if (refreshData.status === "success") {
+            // refresh 성공 시 main-info 재요청
+            return fetchMainInfo();
+          } else {
+            // refresh 실패 시 로그인 페이지 이동
+            navigate("/login");
+            return;
+          }
+        }
+
+        const body = data.body || data;
+
+        if (body.status === "success") {
+          setUserStats({
+            nickname: body.user_name || "",
+            totalSessions: body.total_study_cnt || 0,
+            avgFocus: body.avg_focus || 0,
+            currentRank: body.current_rank || 0,
+            totalUsers: body.total_users || 0,
+          });
+
+          console.log(body);
+
+          setRecentReports(
+            body.history?.map((item, index) => ({
+              id: index + 1,
+              date: item.date,
+              time: item.time,
+              place: item.location,
+              subject: item.subject,
+              score: item.score,
+              duration: `${item.duration}분`,
+            })) || []
+          );
+        }
+      } catch (err) {
+        console.error("MainPage fetch error:", err);
+      }
+    };
+
+    fetchMainInfo();
+  }, [navigate]);
 
   // 더미 데이터
-  const userStats = {
-    nickname: nickname,
-    totalSessions: 23,
-    avgFocus: 87.5,
-    currentRank: 12,
-    totalUsers: 1542,
-    weeklyFocus: [78, 82, 85, 88, 90, 87, 89],
-  };
+  // const userStats = {
+  //   nickname: userData?.user_name || nickname,
+  //   totalSessions: userData?.total_study_cnt || 0,
+  //   avgFocus: userData?.avg_focus || 0,
+  //   currentRank: userData?.current_rank || "-",
+  //   totalUsers: userData?.total_users || 0,
+  //   weeklyFocus: [78, 82, 85, 88, 90, 87, 89],
+  // };
 
-  const recentReports = [
-    {
-      id: 1,
-      date: "2025-01-08",
-      time: "오후 2:00",
-      place: "도서관",
-      subject: "영어 스피킹",
-      score: 92.3,
-      duration: "45분",
-    },
-    {
-      id: 2,
-      date: "2025-01-07",
-      time: "오전 10:00",
-      place: "집",
-      subject: "수학 문제풀이",
-      score: 88.7,
-      duration: "60분",
-    },
-    {
-      id: 3,
-      date: "2025-01-06",
-      time: "오후 4:00",
-      place: "카페",
-      subject: "독서",
-      score: 85.2,
-      duration: "30분",
-    },
-    {
-      id: 4,
-      date: "2025-01-05",
-      time: "오후 3:00",
-      place: "스터디룸",
-      subject: "코딩",
-      score: 90.0,
-      duration: "120분",
-    },
-  ];
+  // const recentReports =
+  //   userData?.history?.map((item, index) => ({
+  //     id: index + 1,
+  //     date: item.date,
+  //     time: item.time,
+  //     place: item.location,
+  //     subject: item.subject,
+  //     score: item.score,
+  //     duration: `${item.duration}분`,
+  //   })) || [];
+
+  // const recentReports = [
+  //   {
+  //     id: 1,
+  //     date: "2025-01-08",
+  //     time: "오후 2:00",
+  //     place: "도서관",
+  //     subject: "영어 스피킹",
+  //     score: 92.3,
+  //     duration: "45분",
+  //   },
+  //   {
+  //     id: 2,
+  //     date: "2025-01-07",
+  //     time: "오전 10:00",
+  //     place: "집",
+  //     subject: "수학 문제풀이",
+  //     score: 88.7,
+  //     duration: "60분",
+  //   },
+  //   {
+  //     id: 3,
+  //     date: "2025-01-06",
+  //     time: "오후 4:00",
+  //     place: "카페",
+  //     subject: "독서",
+  //     score: 85.2,
+  //     duration: "30분",
+  //   },
+  //   {
+  //     id: 4,
+  //     date: "2025-01-05",
+  //     time: "오후 3:00",
+  //     place: "스터디룸",
+  //     subject: "코딩",
+  //     score: 90.0,
+  //     duration: "120분",
+  //   },
+  // ];
 
   const timeOptions = [
     "오전 6:00",
@@ -164,7 +250,7 @@ const MainPage = () => {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="font-semibold text-gray-900">
-                  {userStats.nickname}
+                  {userStats?.nickname || nickname}
                 </p>
                 <p className="text-sm text-emerald-400">
                   현재 {userStats.currentRank}등이에요!🔥

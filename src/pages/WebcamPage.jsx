@@ -385,7 +385,7 @@ const WebcamPage = () => {
 
     try {
       const res = await fetch(
-        "https://localhost:8443//api/dashboard/recent-report/me",
+        "https://localhost:8443/api/dashboard/recent-report/me",
         {
           method: "GET",
           headers: {

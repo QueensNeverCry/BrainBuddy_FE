@@ -12,6 +12,7 @@
   "dependencies": {
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/face_detection": "^0.4.1646425229",
+    "axios": "^1.11.0",
     "lucide-react": "^0.532.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

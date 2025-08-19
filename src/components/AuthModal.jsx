@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const AuthModal = ({ onClose, onSuccess }) => {
+const AuthModal = ({ onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
     confirmPassword: "",
   });
   const [isPasswordMismatch, setIsPasswordMismatch] = useState(false);
+  const navigate = useNavigate();
 
   // 비밀번호 확인 체크
   useEffect(() => {
@@ -54,6 +56,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
+        credentials: "include", // cookie
       });
 
       if (!response.ok) {
@@ -62,16 +65,23 @@ const AuthModal = ({ onClose, onSuccess }) => {
         return;
       }
 
-      const data = await response.json();
+      // const data = await response.json();
 
       if (isLogin) {
-        localStorage.setItem("nickname", data.user_name || ""); // 닉네임이 응답에 있는 경우
-        alert("로그인 성공!");
-        onSuccess(); // 부모 컴포넌트에서 처리
+        handleLoginSuccess();
       } else {
         alert("회원가입이 완료되었습니다.");
-        switchMode(); // 로그인 모드로 전환
+        switchMode();
       }
+
+      // if (isLogin) {
+      //   localStorage.setItem("nickname", data.user_name || ""); // 닉네임이 응답에 있는 경우
+      //   alert("로그인 성공!");
+      //   onSuccess(); // 부모 컴포넌트에서 처리
+      // } else {
+      //   alert("회원가입이 완료되었습니다.");
+      //   switchMode(); // 로그인 모드로 전환
+      // }
     } catch (error) {
       console.error("에러:", error);
       alert("서버에 연결할 수 없습니다.");
@@ -87,6 +97,42 @@ const AuthModal = ({ onClose, onSuccess }) => {
       confirmPassword: "",
     });
     setIsPasswordMismatch(false);
+  };
+
+  const handleLoginSuccess = async () => {
+    try {
+      let res = await fetch("https://localhost:8443/api/dashboard/main-info", {
+        method: "GET",
+        credentials: "include", // 쿠키 전송
+      });
+      let data = await res.json();
+
+      if (data.status === "success") {
+        localStorage.setItem("nickname", data.user_name || "");
+        // MainPage로 이동, state로 사용자 데이터 전달 가능
+        navigate("/main", { state: { userData: data } });
+      } else if (data.code === "TOKEN_EXPIRED") {
+        // refresh token 요청
+        const refreshRes = await fetch(
+          "https://localhost:8443/api/auth/refresh",
+          { method: "POST", credentials: "include" }
+        );
+        const refreshData = await refreshRes.json();
+        if (refreshData.status === "success") {
+          // refresh 성공 후 다시 main-info 요청
+          await handleLoginSuccess();
+        } else {
+          alert("자동 로그인 실패. 다시 로그인 해주세요.");
+          navigate("/"); // LandingPage
+        }
+      } else if (data.code === "TOKEN_INVALID") {
+        alert("인증 실패. 다시 로그인 해주세요.");
+        navigate("/"); // LandingPage
+      }
+    } catch (err) {
+      console.error(err);
+      navigate("/");
+    }
   };
 
   return (
