@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Brain,
   Clock,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import TutorialModal from "../components/TutorialModal";
 import ReportModal from "../components/ReportModal";
+import UserModal from "../components/UserModal";
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -243,9 +244,9 @@ const MainPage = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Brain className="w-8 h-8 text-emerald-400" />
-              <span className="text-2xl font-bold text-gray-900">
+              <Link to="/" className="text-2xl font-bold text-gray-900">
                 BrainBuddy
-              </span>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
@@ -256,9 +257,10 @@ const MainPage = () => {
                   현재 {userStats.currentRank}등이에요!🔥
                 </p>
               </div>
-              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+              <UserModal />
+              {/* <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
                 <Award className="w-5 h-5 text-emerald-400" />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

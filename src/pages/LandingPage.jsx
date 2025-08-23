@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Brain, Trophy, Users, Star, TrendingUp } from "lucide-react";
 import AuthModal from "../components/AuthModal";
 
@@ -60,9 +60,9 @@ const LandingPage = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Brain className="w-8 h-8 text-emerald-400" />
-              <span className="text-2xl font-bold text-gray-900">
+              <Link to="/" className="text-2xl font-bold text-gray-900">
                 BrainBuddy
-              </span>
+              </Link>
             </div>
             <button
               onClick={() => setShowAuthModal(true)}

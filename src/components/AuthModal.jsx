@@ -35,7 +35,7 @@ const AuthModal = ({ onClose }) => {
 
     const url = isLogin
       ? "https://www.brainbuddy.co.kr/api/auth/log-in"
-      : "https://www.branibuddy.co.kr/api/auth/sign-up";
+      : "https://www.brainbuddy.co.kr/api/auth/sign-up";
 
     const payload = isLogin
       ? {
@@ -49,6 +49,7 @@ const AuthModal = ({ onClose }) => {
           user_pw_confirm: formData.confirmPassword,
         };
 
+    // API 요청 및 응답 처리
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -67,6 +68,7 @@ const AuthModal = ({ onClose }) => {
 
       // const data = await response.json();
 
+      // 로그인/회원가입 후 처리
       if (isLogin) {
         handleLoginSuccess();
       } else {
@@ -99,6 +101,7 @@ const AuthModal = ({ onClose }) => {
     setIsPasswordMismatch(false);
   };
 
+  // 로그인 성공 후 토큰 처리 & 메인페이지 이동
   const handleLoginSuccess = async () => {
     try {
       let res = await fetch(
